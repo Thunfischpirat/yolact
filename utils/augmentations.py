@@ -3,6 +3,7 @@ from torchvision import transforms
 import cv2
 import numpy as np
 import types
+import random as py_random
 from numpy import random
 from math import sqrt
 
@@ -306,7 +307,7 @@ class RandomSampleCrop(object):
         height, width, _ = image.shape
         while True:
             # randomly choose a mode
-            mode = random.choice(self.sample_options)
+            mode = py_random.choice(self.sample_options)
             if mode is None:
                 return image, masks, boxes, labels
 

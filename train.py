@@ -121,7 +121,7 @@ loss_types = ['B', 'C', 'M', 'P', 'D', 'E', 'S', 'I']
 
 if torch.cuda.is_available():
     if args.cuda:
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        torch.set_default_tensor_type('torch.FloatTensor')
     if not args.cuda:
         print("WARNING: It looks like you have a CUDA device, but aren't " +
               "using CUDA.\nRun with --cuda for optimal training speed.")
@@ -370,8 +370,9 @@ def train():
                 if epoch % args.validation_epoch == 0 and epoch > 0:
                     compute_validation_map(epoch, iteration, yolact_net, val_dataset, log if args.log else None)
         
-        # Compute validation mAP after training is finished
-        compute_validation_map(epoch, iteration, yolact_net, val_dataset, log if args.log else None)
+        # Compute validation mAP after training is finished, unless validation
+        if args.validation_epoch > 0:
+            compute_validation_map(epoch, iteration, yolact_net, val_dataset, log if args.log else None)
     except KeyboardInterrupt:
         if args.interrupt:
             print('Stopping early. Saving network...')

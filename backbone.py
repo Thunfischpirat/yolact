@@ -4,11 +4,59 @@ import pickle
 
 from collections import OrderedDict
 
-try:
-    from dcn_v2 import DCN
-except ImportError:
-    def DCN(*args, **kwdargs):
-        raise Exception('DCN could not be imported. If you want to use YOLACT++ models, compile DCN. Check the README for instructions.')
+from torch.nn.modules.utils import _pair
+from torchvision.ops import deform_conv2d
+
+class DCN(nn.Module):
+    """DCNv2-compatible wrapper backed by torchvision for modern PyTorch."""
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation=1, deformable_groups=1):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+        self.deformable_groups = deformable_groups
+
+        self.weight = nn.Parameter(torch.Tensor(out_channels, in_channels, *self.kernel_size))
+        self.bias = nn.Parameter(torch.Tensor(out_channels))
+
+        channels = deformable_groups * 3 * self.kernel_size[0] * self.kernel_size[1]
+        self.conv_offset_mask = nn.Conv2d(
+            in_channels,
+            channels,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self.padding,
+            bias=True,
+        )
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.weight, a=1)
+        nn.init.constant_(self.bias, 0)
+        nn.init.constant_(self.conv_offset_mask.weight, 0)
+        nn.init.constant_(self.conv_offset_mask.bias, 0)
+
+    def forward(self, input):
+        out = self.conv_offset_mask(input)
+        o1, o2, mask = torch.chunk(out, 3, dim=1)
+        offset = torch.cat((o1, o2), dim=1)
+        mask = torch.sigmoid(mask)
+
+        return deform_conv2d(
+            input,
+            offset,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            mask=mask,
+        )
 
 class Bottleneck(nn.Module):
     """ Adapted from torchvision.models.resnet """

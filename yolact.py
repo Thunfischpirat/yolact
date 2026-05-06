@@ -245,7 +245,7 @@ class PredictionModule(nn.Module):
 
                                 prior_data += [x, y, w, h]
 
-                self.priors = torch.Tensor(prior_data, device=device).view(-1, 4).detach()
+                self.priors = torch.tensor(prior_data, device=device).view(-1, 4).detach()
                 self.priors.requires_grad = False
                 self.last_img_size = (cfg._tmp_img_w, cfg._tmp_img_h)
                 self.last_conv_size = (conv_w, conv_h)
@@ -487,6 +487,9 @@ class Yolact(nn.Module):
             if key.startswith('fpn.downsample_layers.'):
                 if cfg.fpn is not None and int(key.split('.')[2]) >= cfg.fpn.num_downsample:
                     del state_dict[key]
+
+            if not cfg.use_maskiou and key.startswith('maskiou_net.'):
+                del state_dict[key]
         self.load_state_dict(state_dict)
 
     def init_weights(self, backbone_path):
@@ -601,7 +604,7 @@ class Yolact(nn.Module):
                 if cfg.mask_proto_bias:
                     bias_shape = [x for x in proto_out.size()]
                     bias_shape[-1] = 1
-                    proto_out = torch.cat([proto_out, torch.ones(*bias_shape)], -1)
+                    proto_out = torch.cat([proto_out, torch.ones(*bias_shape, device=proto_out.device)], -1)
 
 
         with timer.env('pred_heads'):

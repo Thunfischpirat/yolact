@@ -805,6 +805,32 @@ yolact_plus_resnet50_config = yolact_plus_base_config.copy({
     }),
 })
 
+box_dataset = dataset_base.copy({
+    'name': 'Box Dataset',
+
+    'train_images': '../data/images/default',
+    'train_info': '../data/annotations/instances_box_train.json',
+
+    'valid_images': '../data/images/default',
+    'valid_info': '../data/annotations/instances_box_train.json',
+
+    'class_names': ('box',),
+    'label_map': None,
+})
+
+yolact_plus_box_config = yolact_plus_resnet50_config.copy({
+    'name': 'yolact_plus_box',
+
+    'dataset': box_dataset,
+    'num_classes': len(box_dataset.class_names) + 1,
+
+    'max_iter': 500,
+    'lr': 1e-4,
+    'lr_steps': (350, 450),
+    'use_maskiou': False,
+    'rescore_mask': False,
+})
+
 
 # Default config
 cfg = yolact_base_config.copy()
